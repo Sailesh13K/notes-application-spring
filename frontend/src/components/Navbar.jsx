@@ -1,8 +1,15 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/ContextProvider";
+
 const Navbar = ({ setQuery }) => {
   const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  const handleLogout = () => {
+    logout();
+    navigate("/login");
+  };
 
   return (
     <nav className="bg-gray-800 p-4 text-white flex justify-between items-center">
@@ -35,7 +42,7 @@ const Navbar = ({ setQuery }) => {
             <button
               type="button"
               className="bg-red-500 px-4 py-2 rounded"
-              onClick={logout}
+              onClick={handleLogout}
             >
               Logout
             </button>

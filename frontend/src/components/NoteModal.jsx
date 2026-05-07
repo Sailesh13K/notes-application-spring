@@ -16,11 +16,10 @@ const NoteModal = ({ closeModal, addNote, currNote, editNote }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (currNote) {
-      editNote({ id: currNote.id, title, description });
+      await editNote({ id: currNote.id, title, description });
     } else {
-      addNote({ title, description });
+      await addNote({ title, description });
     }
-    closeModal();
   };
   return (
     <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex justify-center items-center ">

@@ -1,29 +1,30 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/ContextProvider";
-import axios from "axios";
+import { toast } from "react-toastify";
+import api, { getErrorMessage } from "../api/client";
+
 const Login = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { login } = useAuth();
-  const API = import.meta.env.VITE_API_BASE_URL;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const response = await axios.post(`${API}/api/auth/login`, {
-        email,
-        password,
-      });
+      setLoading(true);
+      const response = await api.post("/api/auth/login", { email, password });
       if (response.data.token) {
         login(response.data.user, response.data.token);
-        sessionStorage.setItem("token", response.data.token);
-        sessionStorage.setItem("userName", response.data.user.name);
+        toast.success("Logged in successfully");
         navigate("/");
       }
     } catch (error) {
-      console.error("There was an error!", error.message);
+      toast.error(getErrorMessage(error, "Invalid email or password"));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -57,9 +58,10 @@ const Login = () => {
           <div className="mb-4">
             <button
               type="submit"
+              disabled={loading}
               className="w-full bg-teal-600 text-white py-2 rounded"
             >
-              Login
+              {loading ? "Logging in..." : "Login"}
             </button>
             <p className="text-center mt-2">
               Don't Have Account? <Link to="/register">Register</Link>

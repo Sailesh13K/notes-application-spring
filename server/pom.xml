@@ -15,7 +15,7 @@
   <artifactId>notes-backend</artifactId>
   <version>0.0.1-SNAPSHOT</version>
   <name>notes-backend</name>
-  <description>Notes App backend with Spring Boot, JPA, Security, JWT, MySQL</description>
+  <description>Notes App backend with Spring Boot, JPA, Security, JWT, PostgreSQL</description>
 
   <properties>
     <java.version>17</java.version>
@@ -43,8 +43,17 @@
 
     <!-- DB -->
     <dependency>
-      <groupId>com.mysql</groupId>
-      <artifactId>mysql-connector-j</artifactId>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>runtime</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-core</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-database-postgresql</artifactId>
       <scope>runtime</scope>
     </dependency>
 
@@ -78,6 +87,11 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-test</artifactId>
+      <scope>test</scope>
+    </dependency>
+    <dependency>
+      <groupId>com.h2database</groupId>
+      <artifactId>h2</artifactId>
       <scope>test</scope>
     </dependency>
 

@@ -1,27 +1,29 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
+import { toast } from "react-toastify";
+import api, { getErrorMessage } from "../api/client";
+
 const Signup = () => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+
   const handleSubmit = async (e) => {
-    const API = import.meta.env.VITE_API_BASE_URL;
     e.preventDefault();
     try {
-      const response = await axios.post(`${API}/api/auth/register`, {
-        name,
-        email,
-        password,
-      });
+      setLoading(true);
+      const response = await api.post("/api/auth/register", { name, email, password });
       if (response.data.success) {
+        toast.success("Account created successfully");
         navigate("/login");
       }
-      console.log(response);
     } catch (error) {
-      console.error("There was an error!", error.message);
+      toast.error(getErrorMessage(error, "Unable to create account"));
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -66,9 +68,10 @@ const Signup = () => {
           <div className="mb-4">
             <button
               type="submit"
+              disabled={loading}
               className="w-full bg-teal-600 text-white py-2 rounded"
             >
-              Signup
+              {loading ? "Creating..." : "Signup"}
             </button>
             <p className="text-center mt-2">
               Already Have Account? <Link to="/login">Login</Link>

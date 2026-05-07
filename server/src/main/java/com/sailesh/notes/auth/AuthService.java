@@ -1,11 +1,19 @@
 package com.sailesh.notes.auth;
 
-import com.sailesh.notes.auth.dto.*;
-import com.sailesh.notes.user.*;
-import org.springframework.security.authentication.*;
+import com.sailesh.notes.auth.dto.AuthResponse;
+import com.sailesh.notes.auth.dto.LoginRequest;
+import com.sailesh.notes.auth.dto.RegisterRequest;
+import com.sailesh.notes.auth.dto.UserResponse;
+import com.sailesh.notes.user.Role;
+import com.sailesh.notes.user.User;
+import com.sailesh.notes.user.UserRepository;
+import java.util.Map;
+import org.springframework.http.HttpStatus;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import java.util.Map;   // ← ADD THIS
+import org.springframework.web.server.ResponseStatusException;
 
 @Service
 public class AuthService {
@@ -23,8 +31,9 @@ public class AuthService {
   }
 
   public User register(RegisterRequest req){
-    if (users.existsByEmail(req.getEmail()))
-      throw new RuntimeException("Email already used");
+    if (users.existsByEmail(req.getEmail())) {
+      throw new ResponseStatusException(HttpStatus.CONFLICT, "Email already used");
+    }
 
     User u = User.builder()
       .name(req.getName())
@@ -41,14 +50,15 @@ public class AuthService {
       new UsernamePasswordAuthenticationToken(req.getEmail(), req.getPassword())
     );
 
-    User u = users.findByEmail(req.getEmail()).orElseThrow();
+    User u = users.findByEmail(req.getEmail())
+      .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials"));
 
     String token = jwtService.generate(
       u.getEmail(),
       Map.of("role", u.getRole().name(), "name", u.getName())
     );
 
-    return new AuthResponse(token, u);
+    return new AuthResponse(token, UserResponse.from(u));
   }
 
   public User verify(String email){

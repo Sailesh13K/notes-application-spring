@@ -10,6 +10,6 @@ public class CorsConfig implements WebMvcConfigurer {
   @Value("${app.cors.allowed-origins}") private String allowed;
   @Override
   public void addCorsMappings(CorsRegistry registry) {
-    registry.addMapping("/**").allowedOrigins(allowed).allowedMethods("*").allowedHeaders("*").allowCredentials(true);
+    registry.addMapping("/**").allowedOrigins(allowed.split(",")).allowedMethods("*").allowedHeaders("*").allowCredentials(true);
   }
 }

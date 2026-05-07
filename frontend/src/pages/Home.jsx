@@ -1,53 +1,48 @@
 import React, { useEffect, useState } from "react";
 import Navbar from "../components/Navbar";
 import NoteModal from "../components/NoteModal";
-import axios from "axios";
 import NoteCard from "../components/NoteCard";
 import { toast } from "react-toastify";
-import { useAuth } from "../context/ContextProvider.jsx";
+import api, { getErrorMessage } from "../api/client";
 
 function Home() {
-  const { user, loading: authLoading } = useAuth();
   const [isModelOpen, setModelOpen] = useState(false);
   const [notes, setNotes] = useState([]);
-  const [filteredNotes, setFilteredNotes] = useState([]);
   const [currNote, setCurrNote] = useState(null);
   const [query, setQuery] = useState("");
+  const [page, setPage] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [loading, setLoading] = useState(false);
-  const API = import.meta.env.VITE_API_BASE_URL;
 
-  const token = sessionStorage.getItem("token");
-
-  const fetchNotes = async () => {
-    if (!token) return;
-
+  const fetchNotes = async ({ nextPage = page, search = query } = {}) => {
     try {
       setLoading(true);
-      const { data } = await axios.get(`${API}/api/notes`, {
-        headers: { Authorization: `Bearer ${token}` },
+      const endpoint = search.trim() ? "/api/notes/search" : "/api/notes";
+      const { data } = await api.get(endpoint, {
+        params: {
+          page: nextPage,
+          size: 9,
+          ...(search.trim() ? { query: search.trim() } : {}),
+        },
       });
-      setNotes(data.data || data);
-      setLoading(false);
+      setNotes(data.data?.content || []);
+      setPage(data.data?.number || 0);
+      setTotalPages(data.data?.totalPages || 0);
     } catch (error) {
-      console.log("Error fetching notes:", error.message);
+      toast.error(getErrorMessage(error, "Unable to load notes"));
+    } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchNotes();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token]);
+    const timeout = setTimeout(() => {
+      fetchNotes({ nextPage: 0, search: query });
+    }, 300);
 
-  useEffect(() => {
-    setFilteredNotes(
-      notes.filter(
-        (note) =>
-          note.title.toLowerCase().includes(query.toLowerCase()) ||
-          note.description.toLowerCase().includes(query.toLowerCase())
-      )
-    );
-  }, [query, notes]);
+    return () => clearTimeout(timeout);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query]);
 
   const closeModal = () => setModelOpen(false);
 
@@ -58,112 +53,105 @@ function Home() {
 
   const addNote = async ({ title, description }) => {
     try {
-      const response = await axios.post(
-        `${API}/api/notes/add`,
-        { title, description },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await api.post("/api/notes", { title, description });
       if (response.data.success) {
-        fetchNotes();
         toast.success("Note added successfully");
         closeModal();
+        fetchNotes({ nextPage: 0 });
       }
     } catch (error) {
-      console.error("Error adding note:", error.message);
+      toast.error(getErrorMessage(error, "Unable to add note"));
     }
   };
 
   const deleteNote = async (id) => {
     try {
-      const response = await axios.delete(`${API}/api/notes/${id}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const response = await api.delete(`/api/notes/${id}`);
       if (response.data.success) {
-        fetchNotes();
         toast.success("Note deleted successfully");
+        fetchNotes();
       }
     } catch (error) {
-      console.error("Error deleting note:", error.message);
+      toast.error(getErrorMessage(error, "Unable to delete note"));
     }
   };
 
   const editNote = async ({ id, title, description }) => {
     try {
-      const response = await axios.put(
-        `${API}/api/notes/${id}`,
-        { title, description },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      const response = await api.put(`/api/notes/${id}`, { title, description });
       if (response.data.success) {
-        fetchNotes();
         toast.success("Note updated successfully");
         closeModal();
+        fetchNotes();
       }
     } catch (error) {
-      console.error("Error editing note:", error.message);
+      toast.error(getErrorMessage(error, "Unable to update note"));
     }
   };
-  if (authLoading) {
-    return (
-      <div className="flex justify-center items-center min-h-screen bg-gray-100">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-teal-500"></div>
-      </div>
-    );
-  }
+
+  const goToPage = (nextPage) => {
+    fetchNotes({ nextPage });
+  };
+
   return (
     <div className="bg-gray-100 min-h-screen">
       <Navbar setQuery={setQuery} />
 
-      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3">
-        {user ? (
-          loading ? (
-            <div className="flex justify-center items-center col-span-full mt-10">
-              <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-teal-500"></div>
-            </div>
-          ) : filteredNotes.length > 0 ? (
-            filteredNotes.map((note) => (
-              <NoteCard
-                key={note.id}
-                note={note}
-                onEdit={onEdit}
-                deleteNote={deleteNote}
-              />
-            ))
-          ) : (
-            <p className="m-4 col-span-full text-center text-gray-600">
-              No notes found
-            </p>
-          )
-        ) : (
-          <div className="flex flex-col items-center justify-center min-h-[70vh] text-center col-span-full">
-            <h2 className="text-3xl font-semibold text-gray-800 mb-4">
-              Welcome!
-            </h2>
-            <p className="text-lg text-gray-600 max-w-md">
-              Please <span className="text-teal-500 font-medium">login</span> or{" "}
-              <span className="text-teal-500 font-medium">signup</span> to view
-              and manage your notes efficiently.
-            </p>
+      <div className="grid gap-6 sm:grid-cols-2 md:grid-cols-3 p-4">
+        {loading ? (
+          <div className="flex justify-center items-center col-span-full mt-10">
+            <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-teal-500"></div>
           </div>
+        ) : notes.length > 0 ? (
+          notes.map((note) => (
+            <NoteCard
+              key={note.id}
+              note={note}
+              onEdit={onEdit}
+              deleteNote={deleteNote}
+            />
+          ))
+        ) : (
+          <p className="m-4 col-span-full text-center text-gray-600">
+            No notes found
+          </p>
         )}
       </div>
 
-      {token && (
-        <button
-          onClick={() => {
-            setCurrNote(null);
-            setModelOpen(true);
-          }}
-          className="fixed right-6 bottom-6 text-3xl bg-teal-500 hover:bg-teal-600 text-white font-bold p-4 rounded-full shadow-lg transition-transform transform hover:scale-105"
-          title="Add Note"
-        >
-          +
-        </button>
+      {totalPages > 1 && (
+        <div className="flex justify-center items-center gap-4 pb-8">
+          <button
+            type="button"
+            disabled={page === 0}
+            onClick={() => goToPage(page - 1)}
+            className="bg-gray-800 disabled:bg-gray-400 text-white px-4 py-2 rounded"
+          >
+            Previous
+          </button>
+          <span className="text-gray-700">
+            Page {page + 1} of {totalPages}
+          </span>
+          <button
+            type="button"
+            disabled={page + 1 >= totalPages}
+            onClick={() => goToPage(page + 1)}
+            className="bg-gray-800 disabled:bg-gray-400 text-white px-4 py-2 rounded"
+          >
+            Next
+          </button>
+        </div>
       )}
+
+      <button
+        onClick={() => {
+          setCurrNote(null);
+          setModelOpen(true);
+        }}
+        className="fixed right-6 bottom-6 text-3xl bg-teal-500 hover:bg-teal-600 text-white font-bold p-4 rounded-full shadow-lg transition-transform transform hover:scale-105"
+        title="Add Note"
+      >
+        +
+      </button>
 
       {isModelOpen && (
         <NoteModal

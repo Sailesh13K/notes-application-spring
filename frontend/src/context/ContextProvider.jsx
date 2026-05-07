@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from "react";
-import axios from "axios";
+import api from "../api/client";
 
 const AuthContext = createContext();
 
@@ -29,15 +29,10 @@ const ContextProvider = ({ children }) => {
       }
 
       try {
-        const res = await axios.get(
-          `${import.meta.env.VITE_API_BASE_URL}/api/auth/verify`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const res = await api.get("/api/auth/verify");
 
         if (res.data.success) {
-          setUser(res.data.user);
+          setUser(res.data.data);
         } else {
           logout();
         }
